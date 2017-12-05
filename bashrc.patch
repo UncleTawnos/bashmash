@@ -1,0 +1,32 @@
+--- /root/bash.bashrc   2017-05-08 20:59:26.772967757 +0000
++++ /etc/bash.bashrc    2017-05-08 21:00:55.167110688 +0000
+@@ -29,13 +29,22 @@
+ #esac
+
+ # enable bash completion in interactive shells
+-#if ! shopt -oq posix; then
+-#  if [ -f /usr/share/bash-completion/bash_completion ]; then
+-#    . /usr/share/bash-completion/bash_completion
+-#  elif [ -f /etc/bash_completion ]; then
+-#    . /etc/bash_completion
+-#  fi
+-#fi
++if ! shopt -oq posix; then
++  if [ -f /usr/share/bash-completion/bash_completion ]; then
++    . /usr/share/bash-completion/bash_completion
++  elif [ -f /etc/bash_completion ]; then
++    . /etc/bash_completion
++  fi
++fi
++if [ -d /etc/bash.bashrc.d ]; then
++  for i in /etc/bash.bashrc.d/*; do
++    if [ -r $i ]; then
++      . $i
++    fi
++  done
++  unset i
++fi
++
+
+ # sudo hint
+ if [ ! -e "$HOME/.sudo_as_admin_successful" ] && [ ! -e "$HOME/.hushlogin" ] ; then

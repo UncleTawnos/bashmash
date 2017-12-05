@@ -1,0 +1,12 @@
+syntax on
+set background=dark
+set ts=4
+set history=50                 " number of items in history
+set hlsearch                   " highlight search string
+filetype plugin on             "
+set mouse-=a                   " disable mouse on X-Term type terminals
+set showcmd                     " show commands typed in
+set wildmenu                    " bash-like completion while typing commands
+set incsearch                   " incremental search
+set statusline=%<%f\ (%{&encoding})\ %h%m%r%=%-14.(%l,%c%V%)\ %P
+set laststatus=2                " always show status line

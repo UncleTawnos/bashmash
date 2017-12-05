@@ -1,0 +1,57 @@
+#!/bin/bash
+ # history
+ history_hook() {
+  local history_ret="$?"
+  local history_cur="$(history 1)"
+  test -n "${history_last}" -a "${history_last}" != "${history_cur}" && echo -n "${history_ret} ${history_cur}" | gawk -F "\v" -vHISTTIMEMININTERVAL="${HISTTIMEMININTERVAL}" -vHISTTIMEFILE="${HISTTIMEFILE}" '
+ BEGIN {
+  endtime = systime();
+  HISTTIMEMININTERVAL += 0; 
+ }
+ 
+ NR > 1 {
+  command = command "\n" $0;
+  next;
+ }
+ 
+ NF == 1 {
+  # we dont have start date
+  match($1, /^ *([0-9]+) +([0-9]+) +([^ ].*)$/, Z)
+  retcode   = substr($1, Z[1, "start"], Z[1, "length"]) + 0;
+  histid    = substr($1, Z[2, "start"], Z[2, "length"]) + 0;
+  starttime = endtime;
+  command   = substr($1, Z[3, "start"], Z[3, "length"]);
+ }
+ 
+ NF == 2 {
+  # we have start date now
+  match($1, /^ *([0-9]+) +([0-9]+) +([0-9]+) *$/, Z)
+  retcode   = substr($1, Z[1, "start"], Z[1, "length"]) + 0;
+  histid    = substr($1, Z[2, "start"], Z[2, "length"]) + 0;
+  starttime = substr($1, Z[3, "start"], Z[3, "length"]) + 0;
+  command   = gensub(/(^ +)|( +$)/, "", "g", $2);
+ }
+ 
+ END {
+  if (length(command) > 0) {
+    if (endtime - starttime >= HISTTIMEMININTERVAL)
+      time = strftime("%Y-%m-%d %H:%M:%S", starttime) strftime("-%H:%M:%S", endtime);
+    else
+      time = strftime("%Y-%m-%d %H:%M:%S", endtime);
+    if (retcode == 0) {
+      printf("\033[02;33m%s \033[00;02;36m%s\033[00m\n", time, command);
+      printf("%s %s\n", time, command) >> HISTTIMEFILE;
+    } else {
+      printf("\033[02;33m%s \033[00;02;31m%s # %d\033[00m\n", time, command, retcode);
+      printf("%s %s # %d\n", time, command, retcode) >> HISTTIMEFILE;
+    }
+  }
+ }
+ '
+  history_last="${history_cur}"
+ }
+ HISTCONTROL=""
+ #HISTTIMEFORMAT=`echo -en ' %s\v'`
+ HISTTIMEFILE="${HOME}/.bash_time_history"
+ HISTTIMEMININTERVAL="10"
+ PROMPT_COMMAND=history_hook
