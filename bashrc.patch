@@ -30,3 +30,4 @@
 
  # sudo hint
  if [ ! -e "$HOME/.sudo_as_admin_successful" ] && [ ! -e "$HOME/.hushlogin" ] ; then
+ 
