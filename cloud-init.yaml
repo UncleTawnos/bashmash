@@ -1,0 +1,71 @@
+#cloud-config
+write_files:
+  - path: /etc/dhcp/dhclient.conf # Comment 2
+    content: |
+      option rfc3442-classless-static-routes code 121 = array of unsigned integer 8;
+      send host-name = gethostname();
+      supersede domain-name "spnet";
+      supersede domain-search "spnet"
+      supersede search "spnet"
+      request subnet-mask, broadcast-address, time-offset, routers,
+        domain-name-servers, host-name,
+        netbios-name-servers, netbios-scope, interface-mtu,
+        rfc3442-classless-static-routes, ntp-servers;
+      timeout 300;
+    permissions: '0644'
+  - path: /etc/apt/conf.d/recommends.conf
+    content: |
+      APT::Install-Recommends "false";
+      APT::Install-Suggests "false";
+    permissions: '0644'
+  - path: /etc/rc.local # Comment 1
+    content: |
+      #!/bin/sh
+      echo 2dd1ce17-079e-403c-b352-a1921ee207ee > /sys/bus/vmbus/drivers/hv_util/unbind
+      exit 0
+    permissions: 0755
+apt_upgrade: true
+packages:
+  - patch
+  - gawk
+  - bash-completion
+  - aptitude
+  - vim-nox
+runcmd:
+  - test `hostname` = 'master' && sed -i '1s;^;nameserver 8.8.8.8\n;' /etc/resolv.conf # Comment 3
+  - echo 2dd1ce17-079e-403c-b352-a1921ee207ee > /sys/bus/vmbus/drivers/hv_util/unbind # Comment 1
+  - timedatectl set-timezone Europe/Warsaw
+  - puppet agent --enable
+  - mkdir -p /etc/bash.bashrc.d
+  - wget http://spdevops.blob.core.windows.net/postinstall/system_aliases -O /etc/bash.bashrc.d/system_aliases
+  - wget http://spdevops.blob.core.windows.net/postinstall/bash_time_history -O /etc/bash.bashrc.d/bash_time_history
+  - wget http://spdevops.blob.core.windows.net/postinstall/vimrc.local -O /etc/vim/vimrc.local
+  - wget http://spdevops.blob.core.windows.net/postinstall/bashrc.patch -O /tmp/bashrc.patch && patch --dry-run /etc/bash.bashrc < /tmp/bashrc.patch && patch /etc/bash.bashrc < /tmp/bashrc.patch
+users:
+  - name: tech
+    groups: sudo
+    shell: /bin/bash
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    ssh-authorized-keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCikCyMvwc2D/5w51d+Sz2O9aRQLKJ/dsrXFaxnXgjf9niINzkO/fj3FSuUg06RYulxjLAXgRJyUAzJP6XO/UDgB3aDbr7vgmdcboDJR4YvokLdWAZljd2/yMQeLI3z9bk0WdyB6FFQDON8nxMgRzGfgHLCunX8r0FDTnLfYmbdUhRvxmQUO7FH7x9bdtsMCmykrRIEBYb7Z0wRcNjIYJWuUl5Js8UZWtkzP6nDnxK3YQaJOZgrqCb4a6YgcBIH/d//QzyXb3pCtKTy4ffCdluZyCmjG3vC0xW0CUDvH4s0Z1IA9x2HK6DHZB7ZxlE9BfgQdN/uQ5kVfcYhbzcRYXX25C0j3uSqj0HyH659Xbx2dG+UDus+4Rf/LbLHHFa2cXJ8+JkX2ePjC5OvPWz3zyzQequ6noSYjl0CBmyg+W4OcLn0LcgAcoCH1Ylv90ebUx0tQMTbUj0Epc6UHFJMCTHW+rLHcogLpH2jZ+f8jRErOgtyoRHAzdlC2yia3oFLmqIU1+PfF441EuiYvTvXRBtxypLZifOAC6wqVd0Is20pv3W5WSf/DULW0LHu1mr9eO0EmWBtVdWziTGCoUgGDVqBYmqWbNCxn0JYkF3dZcUgqeOE0P2Wnx5jdGFIMDShki580A+EkCITs7Kbs/QRlu4d19LnZ6PpXN8souLxFxefHQ== tech@master
+puppet:
+    conf:
+      master:
+        certname: "master.spnet"
+      agent:
+        server: "master.spnet"
+        certname: "%f.spnet"
+final_message: "The system is finally up, after $UPTIME seconds"
+power_state:
+ delay: "+1"
+ mode: reboot
+ message: "Rebooting..."
+ timeout: 30
+ condition: True
+
+#COMMENTS
+# 1. Due to shitty behaviour of Hyper-V time sync device, we have to unbind it or face unexpected behaviour of some applications as well as a lot of log entries
+#    https://social.msdn.microsoft.com/Forums/azure/en-US/8c0a1026-0b02-405a-848e-628e68229eaf/i-have-a-lot-of-time-has-been-changed-in-the-journal-of-my-linux-boxes?forum=WAVirtualMachinesforWindows
+# 2. Azure servers reddog.microsoft.com as a search domain from DHCP. Cloud-Init's resolve_conf settings are overwritten and resolveconf "base"/"head" are rendered in order that makes reddog a primary search.
+#    Replacing dhclient config was thus required
+# 3. Hack for DNS resolution while installing DNS resolver on master
