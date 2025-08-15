@@ -1,6 +1,6 @@
 #!/bin/bash -x
 apt update
-apt dist-ugrade -y
+apt dist-upgrade -y
 apt install -y patch gawk bash-completion vim-nox net-tools aptitude git
 
 
