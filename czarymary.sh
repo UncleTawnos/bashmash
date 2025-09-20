@@ -11,7 +11,7 @@ wget https://raw.githubusercontent.com/UncleTawnos/bashmash/refs/heads/master/sy
 
 cd /tmp
 wget https://raw.githubusercontent.com/UncleTawnos/bashmash/refs/heads/master/bashrc.patch -O /tmp/bashrc.patch
-patch -p0 < /tmp/bashrc.patch
+cd /etc && patch -p1 < /tmp/bashrc.patch
 
 
 
